@@ -1,52 +1,55 @@
 import pandas as pd
+from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-import xgboost as xgb
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-from utils import save_model
+from sklearn.metrics import roc_auc_score
+import xgboost as xgb
+import joblib
+from sklearn.naive_bayes import GaussianNB
 
-X_train, X_test, y_train, y_test, preprocessor = pd.read_pickle('data/processed/train_test.pkl')
+X_train_p, X_test_p, y_train, y_test, preprocessor, X_train_raw, X_test_raw = pd.read_pickle('data/processed/train_test.pkl')
+
+
 
 models = {
-    'LogisticRegression': LogisticRegression(max_iter=1000),
-    'SVM': SVC(probability=True),
-    'KNN': KNeighborsClassifier(),
-    'DecisionTree': DecisionTreeClassifier(),
-    'RandomForest': RandomForestClassifier(),
-    'GradientBoosting': GradientBoostingClassifier(),
-    'XGBoost': xgb.XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
-    'MultinomialNB': MultinomialNB()
+    "LogisticRegression": LogisticRegression(max_iter=1000, random_state=42),
+    "SVM": SVC(probability=True, random_state=42),
+    "KNN": KNeighborsClassifier(),
+    "DecisionTree": DecisionTreeClassifier(random_state=42),
+    "RandomForest": RandomForestClassifier(random_state=42),
+    "GradientBoosting": GradientBoostingClassifier(random_state=42),
+    "XGBoost": xgb.XGBClassifier(eval_metric='logloss', random_state=42),
+    "GaussianNB": GaussianNB() 
 }
 
-results = {}
+
+best_model = None
+best_score = 0
+
 for name, model in models.items():
     try:
-        model.fit(X_train, y_train)
-        preds = model.predict(X_test)
-        probs = model.predict_proba(X_test)[:, 1]
+        model.fit(X_train_p, y_train)
+        y_pred_proba = model.predict_proba(X_test_p)[:, 1]
+        score = roc_auc_score(y_test, y_pred_proba)
+        print(f"{name} ROC-AUC: {score:.4f}")
 
-        results[name] = {
-            'accuracy': accuracy_score(y_test, preds),
-            'precision': precision_score(y_test, preds),
-            'recall': recall_score(y_test, preds),
-            'f1': f1_score(y_test, preds),
-            'roc_auc': roc_auc_score(y_test, probs)
-        }
+        if score > best_score:
+            best_score = score
+            best_model = model
     except Exception as e:
         print(f"{name} failed: {e}")
 
-best_name = max(results, key=lambda k: results[k]['roc_auc'])
-best_model = models[best_name]
-print(f"Best model: {best_name} with ROC-AUC={results[best_name]['roc_auc']}")
+print(f"Best model: {best_model.__class__.__name__} with ROC-AUC={best_score:.4f}")
 
 pipeline = Pipeline([
     ('preprocessor', preprocessor),
     ('classifier', best_model)
 ])
 
-pipeline.fit(X_train, y_train)
-save_model(pipeline)
+pipeline.fit(X_train_raw, y_train)
+
+joblib.dump(pipeline, 'models/final_model.pkl')

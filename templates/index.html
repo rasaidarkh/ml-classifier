@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Heart Disease Risk Predictor</title>
+</head>
+<body>
+    <h1>Введите данные пациента</h1>
+    <form method="post">
+        Возраст: <input name="Age" type="number" required><br>
+        Пол (M/F): <input name="Sex" type="text" maxlength="1" required><br>
+        Тип боли в груди: <input name="ChestPainType" type="text" required><br>
+        Артериальное давление в покое: <input name="RestingBP" type="number" required><br>
+        Холестерин: <input name="Cholesterol" type="number" required><br>
+        Глюкоза натощак (0 или 1): <input name="FastingBS" type="number" min="0" max="1" required><br>
+        Результаты ЭКГ в покое: <input name="RestingECG" type="text" required><br>
+        Максимальный сердечный ритм: <input name="MaxHR" type="number" required><br>
+        Ангина при нагрузке (Y/N): <input name="ExerciseAngina" type="text" maxlength="1" required><br>
+        Oldpeak: <input name="Oldpeak" type="number" step="any" required><br>
+        ST Slope: <input name="ST_Slope" type="text" required><br>
+        <button type="submit">Предсказать</button>
+    </form>
+
+    {% if result %}
+    <h2>{{ result }}</h2>
+    {% endif %}
+</body>
+</html>
